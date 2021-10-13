@@ -1,0 +1,38 @@
+name: Validate Pull Request
+
+# Trigger on pull request, for things that warrants re-build
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - .github/**
+      - Dockerfile
+
+jobs:
+  # Verify image build success
+  build_image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Enable multi-architecture support on build node
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          version: latest
+
+      - name: Build image (no push)
+        run: |
+          docker buildx build \
+            --label org.opencontainers.image.revision="${{github.sha}}" \
+            --platform "linux/arm/v7,linux/arm64" \
+            --pull \
+            --output "type=image,push=false" \
+            --file ./Dockerfile .
